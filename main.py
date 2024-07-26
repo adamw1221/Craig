@@ -11,13 +11,29 @@ async def onready():
     print("Bot enabled")
 
 #TODO join voice channel
-@client.command(pass_context=True)
+@client.command()
 async def join(ctx):
     if(ctx.author.voice):
        channel=ctx.message.author.voice.channel
        await channel.connect()
     else:
         await ctx.send("Join a voice channel first!")
+
+@client.command()
+async def pause(ctx):
+    if(ctx.author.voice):
+        user_channel=ctx.message.author.voice.channel
+        bot_channel=discord.utils.get(client.voice_clients)
+        if user_channel == bot_channel.channel:
+            if ctx.voice_client.is_playing():
+                await ctx.send("Paused the music.")
+                await ctx.voice_client.pause()
+            else:
+                await ctx.send("No music is currently playing.")
+        else:
+            await ctx.send("You are not in my channel.")
+    else:
+        await ctx.send("Join my channel first!")
 
 @client.event
 async def on_voice_state_update(member, before, after):
@@ -31,7 +47,7 @@ async def on_voice_state_update(member, before, after):
                 await text_channel.send("Goodbye!")
             await voice_client.disconnect()
 
-@client.command(pass_context=True)
+@client.command()
 async def play(ctx, url):
     if ctx.voice_client is None:
         if ctx.author.voice:
