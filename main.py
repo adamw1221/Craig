@@ -13,7 +13,7 @@ async def onready():
 #TODO join voice channel
 @client.command()
 async def join(ctx):
-    if(ctx.author.voice):
+    if ctx.author.voice:
        channel=ctx.message.author.voice.channel
        await channel.connect()
     else:
@@ -21,17 +21,39 @@ async def join(ctx):
 
 @client.command()
 async def pause(ctx):
-    if(ctx.author.voice):
+    if ctx.author.voice:
         user_channel=ctx.message.author.voice.channel
         bot_channel=discord.utils.get(client.voice_clients)
-        if user_channel == bot_channel.channel:
-            if ctx.voice_client.is_playing():
-                await ctx.send("Paused the music.")
-                await ctx.voice_client.pause()
+        try:
+            if user_channel == bot_channel.channel:
+                if ctx.voice_client.is_playing():
+                    await ctx.send("Paused the music.")
+                    await ctx.voice_client.pause()
+                else:
+                    await ctx.send("No music is currently playing.")
             else:
-                await ctx.send("No music is currently playing.")
-        else:
-            await ctx.send("You are not in my channel.")
+                await ctx.send("You are not in my channel.")
+        except:
+            await ctx.send("Add me to your channel first") 
+    else:
+        await ctx.send("Join my channel first!")
+        
+@client.command()
+async def resume(ctx):
+    if ctx.author.voice:
+        user_channel=ctx.message.author.voice.channel
+        bot_channel=discord.utils.get(client.voice_clients)
+        try:
+            if user_channel == bot_channel.channel:
+                if ctx.voice_client.is_paused():
+                    await ctx.send("Resumed the music.")
+                    await ctx.voice_client.resume()
+                else:
+                    await ctx.send("Music is already playing.")
+            else:
+                await ctx.send("You are not in my channel.")
+        except:
+           await ctx.send("Add me to your channel first") 
     else:
         await ctx.send("Join my channel first!")
 
@@ -42,7 +64,7 @@ async def on_voice_state_update(member, before, after):
     if voice_client and voice_client.channel:
         # If the bot's voice channel has no other users, disconnect
         if len(voice_client.channel.members) == 1:
-            text_channel = discord.utils.get(member.guild.text_channels, name='dev')
+            text_channel = discord.utils.get(member.guild.text_channels, name='dev') #TODO: Make not hardcoded
             if text_channel:
                 await text_channel.send("Goodbye!")
             await voice_client.disconnect()
