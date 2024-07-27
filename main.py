@@ -1,66 +1,136 @@
 import discord
+from typing import Literal, Optional
 from discord.ext import commands
 import yt_dlp
 import os
 
-client = commands.Bot(command_prefix = '?', intents=discord.Intents.all())
+#TODO: Command list
+#TODO: Stop
+#TODO: Loop
+#TODO: Queue
+#TODO: Skip
+#TODO: Replay
+#TODO: Personal playlists
+#TODO: Playlist
+    #TODO: Shuffle
 
-@client.event
+craig = commands.Bot(command_prefix = '?', intents=discord.Intents.all())
 
+SERVER_ID = 1265147451237597257
+
+intents = discord.Intents.default()
+intents.message_content = True
+
+@craig.command()
+@commands.guild_only()
+@commands.is_owner()
+async def sync(ctx: commands.Context, guilds: commands.Greedy[discord.Object], spec: Optional[Literal["~", "*", "^"]] = None) -> None:
+    if not guilds:
+        if spec == "~":
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "*":
+            ctx.bot.tree.copy_global_to(guild=ctx.guild)
+            synced = await ctx.bot.tree.sync(guild=ctx.guild)
+        elif spec == "^":
+            ctx.bot.tree.clear_commands(guild=ctx.guild)
+            await ctx.bot.tree.sync(guild=ctx.guild)
+            synced = []
+        else:
+            synced = await ctx.bot.tree.sync()
+
+        await ctx.send(
+            f"Synced {len(synced)} commands {'globally' if spec is None else 'to the current guild.'}"
+        )
+        return
+
+    ret = 0
+    for guild in guilds:
+        try:
+            await ctx.bot.tree.sync(guild=guild)
+        except discord.HTTPException:
+            pass
+        else:
+            ret += 1
+
+    await ctx.send(f"Synced the tree to {ret}/{len(guilds)}.")
+
+@craig.tree.command(description='Says hi', guild=discord.Object(id = SERVER_ID))
+async def hello(ctx: discord.Interaction):
+  await ctx.response.send_message('Hi!')
+
+@craig.event
 async def onready():
     print("Bot enabled")
 
-#TODO join voice channel
-@client.command()
-async def join(ctx):
-    if ctx.author.voice:
-       channel=ctx.message.author.voice.channel
-       await channel.connect()
+@craig.tree.command(description='Join your voice channel', guild=discord.Object(id = SERVER_ID))
+async def join(ctx: discord.Interaction):
+    if ctx.user.voice:
+        channel=ctx.user.voice.channel
+        await channel.connect()
     else:
-        await ctx.send("Join a voice channel first!")
+        await ctx.response.send_message("Join a voice channel first!")
 
-@client.command()
-async def pause(ctx):
-    if ctx.author.voice:
-        user_channel=ctx.message.author.voice.channel
-        bot_channel=discord.utils.get(client.voice_clients)
+@craig.tree.command(description='Pause music', guild=discord.Object(id = SERVER_ID))
+async def pause(ctx: discord.Interaction):
+    if ctx.user.voice:
+        user_channel=ctx.user.voice.channel
+        bot_channel=discord.utils.get(craig.voice_clients)
         try:
             if user_channel == bot_channel.channel:
-                if ctx.voice_client.is_playing():
-                    await ctx.send("Paused the music.")
-                    await ctx.voice_client.pause()
+                if bot_channel.is_playing():
+                    await ctx.response.send_message("Paused the music.")
+                    bot_channel.pause()
                 else:
-                    await ctx.send("No music is currently playing.")
+                    await ctx.response.send_message("No music is currently playing.")
             else:
-                await ctx.send("You are not in my channel.")
-        except:
-            await ctx.send("Add me to your channel first") 
+                await ctx.response.send_message("You are not in my channel.")
+        except AttributeError:
+            await ctx.response.send_message("Add me to your channel first") 
     else:
-        await ctx.send("Join my channel first!")
-        
-@client.command()
-async def resume(ctx):
-    if ctx.author.voice:
-        user_channel=ctx.message.author.voice.channel
-        bot_channel=discord.utils.get(client.voice_clients)
+        await ctx.response.send_message("Join my channel first!")
+
+@craig.tree.command(description='Stop music', guild=discord.Object(id = SERVER_ID))
+async def stop(ctx: discord.Interaction):
+    if ctx.user.voice:
+        user_channel=ctx.user.voice.channel
+        bot_channel=discord.utils.get(craig.voice_clients)
         try:
             if user_channel == bot_channel.channel:
-                if ctx.voice_client.is_paused():
-                    await ctx.send("Resumed the music.")
-                    await ctx.voice_client.resume()
+                if bot_channel.is_playing():
+                    await ctx.response.send_message("Paused the music.")
+                    bot_channel.stop()
                 else:
-                    await ctx.send("Music is already playing.")
+                    await ctx.response.send_message("No music is currently playing.")
             else:
-                await ctx.send("You are not in my channel.")
-        except:
-           await ctx.send("Add me to your channel first") 
+                await ctx.response.send_message("You are not in my channel.")
+        except AttributeError:
+            await ctx.response.send_message("Add me to your channel first") 
     else:
-        await ctx.send("Join my channel first!")
+        await ctx.response.send_message("Join my channel first!")
 
-@client.event
+@craig.tree.command(description='Resume music', guild=discord.Object(id = SERVER_ID))
+async def resume(ctx: discord.Interaction):
+    if ctx.user.voice:
+        user_channel=ctx.user.voice.channel
+        bot_channel=discord.utils.get(craig.voice_clients)
+        try:
+            if user_channel == bot_channel.channel:
+                if bot_channel.is_paused():
+                    await ctx.response.send_message("Resumed the music.")
+                    bot_channel.resume()
+                else:
+                    await ctx.response.send_message("Music is already playing.")
+            else:
+                await ctx.response.send_message("You are not in my channel.")
+        except AttributeError:
+           await ctx.response.send_message("Add me to your channel first") 
+    else:
+        await ctx.response.send_message("Join my channel first!")
+
+@craig.event
 async def on_voice_state_update(member, before, after):
     # Check if the bot is connected to a voice channel
-    voice_client = discord.utils.get(client.voice_clients, guild=member.guild)
+    voice_client = discord.utils.get(craig.voice_clients, guild=member.guild)
     if voice_client and voice_client.channel:
         # If the bot's voice channel has no other users, disconnect
         if len(voice_client.channel.members) == 1:
@@ -69,16 +139,19 @@ async def on_voice_state_update(member, before, after):
                 await text_channel.send("Goodbye!")
             await voice_client.disconnect()
 
-@client.command()
-async def play(ctx, url):
-    if ctx.voice_client is None:
-        if ctx.author.voice:
-            channel = ctx.message.author.voice.channel
+@craig.tree.command(description='Play music from a youtube URL', guild=discord.Object(id = SERVER_ID))
+async def play(ctx: discord.Interaction, url: str):
+    craig_voice_client = discord.utils.get(craig.voice_clients)
+    if craig_voice_client is None:
+    #if ctx.voice_client is None:
+        if ctx.user.voice:
+            channel = ctx.user.voice.channel
             await channel.connect()
         else:
-            await ctx.send("Join a voice channel first!")
+            await ctx.response.send_message("Join a voice channel first!")
             return
         
+    await ctx.response.send_message("Enjoy!") 
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -90,14 +163,11 @@ async def play(ctx, url):
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
-        #error_code = ydl.download(URLS)
-        url2 = info["url"]
-        source = await discord.FFmpegOpusAudio.from_probe(url2, method='fallback')
+        video_url = info["url"]
+        video_title = info["title"]
+        source = await discord.FFmpegOpusAudio.from_probe(video_url, method='fallback')
 
-    ctx.voice_client.play(source)
+    await ctx.followup.send("Now playing: " + video_title)
+    discord.utils.get(craig.voice_clients).play(source)
 
-@client.command()
-async def hello(ctx):
-    await ctx.send("Hi!")
-
-client.run(os.environ["CRAIG_TOKEN"])
+craig.run(os.environ["CRAIG_TOKEN"])
