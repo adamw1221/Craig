@@ -96,8 +96,8 @@ async def stop(ctx: discord.Interaction):
         bot_channel=discord.utils.get(craig.voice_clients)
         try:
             if user_channel == bot_channel.channel:
-                if bot_channel.is_playing():
-                    await ctx.response.send_message("Paused the music.")
+                if bot_channel.is_playing() or bot_channel.is_paused():
+                    await ctx.response.send_message("Stopped the music.")
                     bot_channel.stop()
                 else:
                     await ctx.response.send_message("No music is currently playing.")
