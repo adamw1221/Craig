@@ -5,7 +5,6 @@ import yt_dlp
 import os
 
 #TODO: Command list
-#TODO: Stop
 #TODO: Loop
 #TODO: Queue
 #TODO: Skip
@@ -118,6 +117,8 @@ async def resume(ctx: discord.Interaction):
                 if bot_channel.is_paused():
                     await ctx.response.send_message("Resumed the music.")
                     bot_channel.resume()
+                elif not bot_channel.is_playing():
+                    await ctx.response.send_message("No music is currently playing.")
                 else:
                     await ctx.response.send_message("Music is already playing.")
             else:
@@ -166,8 +167,15 @@ async def play(ctx: discord.Interaction, url: str):
         video_url = info["url"]
         video_title = info["title"]
         source = await discord.FFmpegOpusAudio.from_probe(video_url, method='fallback')
+        arrayOfSongs = []
+        arrayOfSongs.append(source)
 
-    await ctx.followup.send("Now playing: " + video_title)
-    discord.utils.get(craig.voice_clients).play(source)
+    #await ctx.followup.send("Now playing: " + video_title)
+    i = 0
+    async for i in arrayOfSongs:
+        discord.utils.get(craig.voice_clients).play(arrayOfSongs[i])
+        arrayOfSongs.pop(i)
+        if len(arrayOfSongs) == 0:
+            return
 
 craig.run(os.environ["CRAIG_TOKEN"])
