@@ -6,7 +6,6 @@ import os
 
 #TODO: Command list
 #TODO: Loop
-#TODO: Queue
 #TODO: Skip
 #TODO: Replay
 #TODO: Personal playlists
@@ -19,6 +18,8 @@ SERVER_ID = 1265147451237597257
 
 intents = discord.Intents.default()
 intents.message_content = True
+
+song_queue = []
 
 @craig.command()
 @commands.guild_only()
@@ -140,11 +141,19 @@ async def on_voice_state_update(member, before, after):
                 await text_channel.send("Goodbye!")
             await voice_client.disconnect()
 
+async def check_queue(ctx):
+    if song_queue:
+        source, title = song_queue.pop(0)
+        voice_client = discord.utils.get(craig.voice_clients)
+        voice_client.play(source, after=lambda e: ctx.client.loop.create_task(check_queue(ctx)))
+        await ctx.followup.send(f"Now playing: {title}")
+
 @craig.tree.command(description='Play music from a youtube URL', guild=discord.Object(id = SERVER_ID))
 async def play(ctx: discord.Interaction, url: str):
+    await ctx.response.defer()
+
     craig_voice_client = discord.utils.get(craig.voice_clients)
     if craig_voice_client is None:
-    #if ctx.voice_client is None:
         if ctx.user.voice:
             channel = ctx.user.voice.channel
             await channel.connect()
@@ -152,7 +161,8 @@ async def play(ctx: discord.Interaction, url: str):
             await ctx.response.send_message("Join a voice channel first!")
             return
         
-    await ctx.response.send_message("Enjoy!") 
+    #await ctx.response.send_message("Added to queue!") 
+
     ydl_opts = {
         'format': 'bestaudio/best',
         'noplaylist': True,
@@ -167,15 +177,12 @@ async def play(ctx: discord.Interaction, url: str):
         video_url = info["url"]
         video_title = info["title"]
         source = await discord.FFmpegOpusAudio.from_probe(video_url, method='fallback')
-        arrayOfSongs = []
-        arrayOfSongs.append(source)
 
-    #await ctx.followup.send("Now playing: " + video_title)
-    i = 0
-    async for i in arrayOfSongs:
-        discord.utils.get(craig.voice_clients).play(arrayOfSongs[i])
-        arrayOfSongs.pop(i)
-        if len(arrayOfSongs) == 0:
-            return
+    song_queue.append((source, video_title))
+    await ctx.followup.send(f"Added {video_title} to the queue!")
+
+    if not discord.utils.get(craig.voice_clients).is_playing():
+        await check_queue(ctx)
+
 
 craig.run(os.environ["CRAIG_TOKEN"])
