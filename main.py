@@ -74,7 +74,7 @@ async def join(ctx: discord.Interaction):
 async def leave(ctx: discord.Interaction):
     voice_client = discord.utils.get(craig.voice_clients, guild=ctx.guild)
     
-    if voice_client and voice_client.is_connected():
+    if voice_client and voice_client.is_connected() and voice_client.channel == ctx.user.voice.channel:
         await voice_client.disconnect()
         await ctx.response.send_message("Disconnected from the voice channel.")
     else:
