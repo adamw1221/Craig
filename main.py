@@ -151,9 +151,6 @@ async def on_voice_state_update(member, before, after):
     if voice_client and voice_client.channel:
         # If the bot's voice channel has no other users, disconnect
         if len(voice_client.channel.members) == 1:
-            text_channel = discord.utils.get(member.guild.text_channels, name='dev') #TODO: Make not hardcoded
-            if text_channel:
-                await text_channel.send("Goodbye!")
             await voice_client.disconnect()
 
 async def check_queue(ctx):
