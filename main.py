@@ -89,15 +89,17 @@ async def pause(ctx: discord.Interaction):
     else:
         await ctx.response.send_message("Join my channel first!")
 
-@craig.tree.command(description='Stop music', guild=discord.Object(id = SERVER_ID))
-async def stop(ctx: discord.Interaction):
+@craig.tree.command(description='Skips music', guild=discord.Object(id = SERVER_ID))
+async def skip(ctx: discord.Interaction):
     if ctx.user.voice:
         user_channel=ctx.user.voice.channel
         bot_channel=discord.utils.get(craig.voice_clients)
         try:
             if user_channel == bot_channel.channel:
                 if bot_channel.is_playing() or bot_channel.is_paused():
-                    await ctx.response.send_message("Stopped the music.")
+                    await ctx.response.send_message("Skipped current track.")
+                    # Stopping will end the music, causing it to pop off the array and
+                    # begin the next song that is stored in said array
                     bot_channel.stop()
                 else:
                     await ctx.response.send_message("No music is currently playing.")
@@ -147,6 +149,8 @@ async def check_queue(ctx):
         voice_client = discord.utils.get(craig.voice_clients)
         voice_client.play(source, after=lambda e: ctx.client.loop.create_task(check_queue(ctx)))
         await ctx.followup.send(f"Now playing: {title}")
+    #else:
+    #    await ctx.followup.send("Queue is empty!")
 
 @craig.tree.command(description='Play music from a youtube URL', guild=discord.Object(id = SERVER_ID))
 async def play(ctx: discord.Interaction, url: str):
@@ -183,6 +187,5 @@ async def play(ctx: discord.Interaction, url: str):
 
     if not discord.utils.get(craig.voice_clients).is_playing():
         await check_queue(ctx)
-
 
 craig.run(os.environ["CRAIG_TOKEN"])
