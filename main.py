@@ -70,6 +70,17 @@ async def join(ctx: discord.Interaction):
     else:
         await ctx.response.send_message("Join a voice channel first!")
 
+@craig.tree.command(description='Leave the voice channel', guild=discord.Object(id = SERVER_ID))
+async def leave(ctx: discord.Interaction):
+    voice_client = discord.utils.get(craig.voice_clients, guild=ctx.guild)
+    
+    if voice_client and voice_client.is_connected():
+        await voice_client.disconnect()
+        await ctx.response.send_message("Disconnected from the voice channel.")
+    else:
+        await ctx.response.send_message("I'm not connected to any voice channel.")
+
+
 @craig.tree.command(description='Pause music', guild=discord.Object(id = SERVER_ID))
 async def pause(ctx: discord.Interaction):
     if ctx.user.voice:
